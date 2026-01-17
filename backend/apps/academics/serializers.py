@@ -3,6 +3,9 @@ from apps.academics.models import (
     Faculty, Department, Level, Subject, Class,
     ClassSubject, Enrollment, Timetable, AcademicCalendarEvent
 )
+from django.contrib.auth import get_user_model
+
+User = get_user_model()
 
 
 class FacultySerializer(serializers.ModelSerializer):
@@ -106,6 +109,8 @@ class EnrollmentSerializer(serializers.ModelSerializer):
 
 class TimetableSerializer(serializers.ModelSerializer):
     class_obj = serializers.PrimaryKeyRelatedField(queryset=Class.objects.all())
+    subject = serializers.PrimaryKeyRelatedField(queryset=Subject.objects.all())
+    teacher = serializers.PrimaryKeyRelatedField(queryset=User.objects.all(), required=False, allow_null=True)
     
     subject_name = serializers.SerializerMethodField()
     class_name = serializers.SerializerMethodField()
