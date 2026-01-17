@@ -37,22 +37,68 @@ class LoginSerializer(serializers.Serializer):
 
 
 class TeacherProfileSerializer(serializers.ModelSerializer):
-    user_email = serializers.CharField(source='user.email', read_only=True)
-    user_name = serializers.CharField(source='user.get_full_name', read_only=True)
     user = serializers.PrimaryKeyRelatedField(queryset=User.objects.all())
+    user_data = serializers.SerializerMethodField()
+    user_email = serializers.CharField(source='user.email', read_only=True)
+    user_name = serializers.SerializerMethodField()
+    first_name = serializers.CharField(source='user.first_name', read_only=True)
+    last_name = serializers.CharField(source='user.last_name', read_only=True)
+    email = serializers.CharField(source='user.email', read_only=True)
+    username = serializers.CharField(source='user.username', read_only=True)
     
     class Meta:
         model = TeacherProfile
-        fields = ['id', 'user', 'user_email', 'user_name', 'employee_id', 'qualification', 'experience_years', 'department', 'bio', 'created_at']
-        read_only_fields = ['id', 'created_at', 'user_email', 'user_name']
+        fields = ['id', 'user', 'user_data', 'user_email', 'user_name', 'first_name', 'last_name', 'email', 'username', 'employee_id', 'qualification', 'experience_years', 'department', 'bio', 'created_at']
+        read_only_fields = ['id', 'created_at', 'user_email', 'user_name', 'first_name', 'last_name', 'email', 'username', 'user_data']
+    
+    def get_user_data(self, obj):
+        if obj.user:
+            return {
+                'id': obj.user.id,
+                'email': obj.user.email,
+                'first_name': obj.user.first_name,
+                'last_name': obj.user.last_name,
+                'username': obj.user.username,
+                'phone': obj.user.phone,
+                'role': obj.user.role,
+            }
+        return None
+    
+    def get_user_name(self, obj):
+        if obj.user:
+            return obj.user.get_full_name() or obj.user.username
+        return None
 
 
 class StudentProfileSerializer(serializers.ModelSerializer):
-    user_email = serializers.CharField(source='user.email', read_only=True)
-    user_name = serializers.CharField(source='user.get_full_name', read_only=True)
     user = serializers.PrimaryKeyRelatedField(queryset=User.objects.all())
+    user_data = serializers.SerializerMethodField()
+    user_email = serializers.CharField(source='user.email', read_only=True)
+    user_name = serializers.SerializerMethodField()
+    first_name = serializers.CharField(source='user.first_name', read_only=True)
+    last_name = serializers.CharField(source='user.last_name', read_only=True)
+    email = serializers.CharField(source='user.email', read_only=True)
+    username = serializers.CharField(source='user.username', read_only=True)
     
     class Meta:
         model = StudentProfile
-        fields = ['id', 'user', 'user_email', 'user_name', 'student_id', 'level', 'department', 'enrollment_date', 'created_at']
-        read_only_fields = ['id', 'enrollment_date', 'created_at', 'user_email', 'user_name']
+        fields = ['id', 'user', 'user_data', 'user_email', 'user_name', 'first_name', 'last_name', 'email', 'username', 'student_id', 'level', 'department', 'enrollment_date', 'created_at']
+        read_only_fields = ['id', 'enrollment_date', 'created_at', 'user_email', 'user_name', 'first_name', 'last_name', 'email', 'username', 'user_data']
+    
+    def get_user_data(self, obj):
+        if obj.user:
+            return {
+                'id': obj.user.id,
+                'email': obj.user.email,
+                'first_name': obj.user.first_name,
+                'last_name': obj.user.last_name,
+                'username': obj.user.username,
+                'phone': obj.user.phone,
+                'role': obj.user.role,
+            }
+        return None
+    
+    def get_user_name(self, obj):
+        if obj.user:
+            return obj.user.get_full_name() or obj.user.username
+        return None

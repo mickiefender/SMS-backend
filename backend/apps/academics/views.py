@@ -14,14 +14,22 @@ from apps.academics.serializers import (
 )
 
 
+def get_school_filter(user):
+    """Get school for filtering, returns None for super_admin or if no school assigned"""
+    if user.role == 'super_admin':
+        return None
+    return user.school_id  # Use school_id instead of school to avoid extra query
+
+
 class FacultyViewSet(viewsets.ModelViewSet):
     serializer_class = FacultySerializer
     permission_classes = [IsAuthenticated, IsSchoolAdminOrHigher]
     
     def get_queryset(self):
-        if self.request.user.role == 'super_admin':
+        school_id = get_school_filter(self.request.user)
+        if school_id is None:
             return Faculty.objects.all()
-        return Faculty.objects.filter(school=self.request.user.school)
+        return Faculty.objects.filter(school_id=school_id)
 
 
 class DepartmentViewSet(viewsets.ModelViewSet):
@@ -29,9 +37,10 @@ class DepartmentViewSet(viewsets.ModelViewSet):
     permission_classes = [IsAuthenticated, IsSchoolAdminOrHigher]
     
     def get_queryset(self):
-        if self.request.user.role == 'super_admin':
+        school_id = get_school_filter(self.request.user)
+        if school_id is None:
             return Department.objects.all()
-        return Department.objects.filter(faculty__school=self.request.user.school)
+        return Department.objects.filter(faculty__school_id=school_id)
 
 
 class LevelViewSet(viewsets.ModelViewSet):
@@ -39,9 +48,10 @@ class LevelViewSet(viewsets.ModelViewSet):
     permission_classes = [IsAuthenticated, IsSchoolAdminOrHigher]
     
     def get_queryset(self):
-        if self.request.user.role == 'super_admin':
+        school_id = get_school_filter(self.request.user)
+        if school_id is None:
             return Level.objects.all()
-        return Level.objects.filter(school=self.request.user.school)
+        return Level.objects.filter(school_id=school_id)
 
 
 class SubjectViewSet(viewsets.ModelViewSet):
@@ -49,9 +59,10 @@ class SubjectViewSet(viewsets.ModelViewSet):
     permission_classes = [IsAuthenticated, IsSchoolAdminOrHigher]
     
     def get_queryset(self):
-        if self.request.user.role == 'super_admin':
+        school_id = get_school_filter(self.request.user)
+        if school_id is None:
             return Subject.objects.all()
-        return Subject.objects.filter(school=self.request.user.school)
+        return Subject.objects.filter(school_id=school_id)
 
 
 class ClassViewSet(viewsets.ModelViewSet):
@@ -59,9 +70,16 @@ class ClassViewSet(viewsets.ModelViewSet):
     permission_classes = [IsAuthenticated]
     
     def get_queryset(self):
-        if self.request.user.role == 'super_admin':
+        school_id = get_school_filter(self.request.user)
+        if school_id is None:
             return Class.objects.all()
-        return Class.objects.filter(school=self.request.user.school)
+        return Class.objects.filter(school_id=school_id)
+    
+    def perform_create(self, serializer):
+        if self.request.user.school_id:
+            serializer.save(school_id=self.request.user.school_id)
+        else:
+            serializer.save()
 
 
 class ClassSubjectViewSet(viewsets.ModelViewSet):
@@ -69,9 +87,10 @@ class ClassSubjectViewSet(viewsets.ModelViewSet):
     permission_classes = [IsAuthenticated, IsSchoolAdminOrHigher]
     
     def get_queryset(self):
-        if self.request.user.role == 'super_admin':
+        school_id = get_school_filter(self.request.user)
+        if school_id is None:
             return ClassSubject.objects.all()
-        return ClassSubject.objects.filter(class_obj__school=self.request.user.school)
+        return ClassSubject.objects.filter(class_obj__school_id=school_id)
 
 
 class EnrollmentViewSet(viewsets.ModelViewSet):
@@ -79,9 +98,10 @@ class EnrollmentViewSet(viewsets.ModelViewSet):
     permission_classes = [IsAuthenticated]
     
     def get_queryset(self):
-        if self.request.user.role == 'super_admin':
+        school_id = get_school_filter(self.request.user)
+        if school_id is None:
             return Enrollment.objects.all()
-        return Enrollment.objects.filter(class_obj__school=self.request.user.school)
+        return Enrollment.objects.filter(class_obj__school_id=school_id)
 
 
 class TimetableViewSet(viewsets.ModelViewSet):
@@ -89,9 +109,10 @@ class TimetableViewSet(viewsets.ModelViewSet):
     permission_classes = [IsAuthenticated]
     
     def get_queryset(self):
-        if self.request.user.role == 'super_admin':
+        school_id = get_school_filter(self.request.user)
+        if school_id is None:
             return Timetable.objects.all()
-        return Timetable.objects.filter(class_obj__school=self.request.user.school)
+        return Timetable.objects.filter(class_obj__school_id=school_id)
 
 
 class AcademicCalendarEventViewSet(viewsets.ModelViewSet):
@@ -99,9 +120,10 @@ class AcademicCalendarEventViewSet(viewsets.ModelViewSet):
     permission_classes = [IsAuthenticated, IsSchoolAdminOrHigher]
     
     def get_queryset(self):
-        if self.request.user.role == 'super_admin':
+        school_id = get_school_filter(self.request.user)
+        if school_id is None:
             return AcademicCalendarEvent.objects.all()
-        return AcademicCalendarEvent.objects.filter(school=self.request.user.school)
+        return AcademicCalendarEvent.objects.filter(school_id=school_id)
     
     def perform_create(self, serializer):
-        serializer.save(created_by=self.request.user, school=self.request.user.school)
+        serializer.save(created_by=self.request.user, school_id=self.request.user.school_id)
