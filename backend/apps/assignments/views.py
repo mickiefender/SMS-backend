@@ -1,3 +1,4 @@
+from django.utils import timezone
 from rest_framework import viewsets, status
 from rest_framework.decorators import action
 from rest_framework.response import Response
@@ -22,6 +23,9 @@ class AssignmentViewSet(viewsets.ModelViewSet):
         if self.action in ['create', 'update', 'partial_update', 'destroy']:
             return [IsAuthenticated(), IsTeacher()]
         return [IsAuthenticated()]
+    
+    def perform_create(self, serializer):
+        serializer.save(teacher=self.request.user)
 
 
 class AssignmentSubmissionViewSet(viewsets.ModelViewSet):

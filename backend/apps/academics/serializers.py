@@ -40,6 +40,7 @@ class SubjectSerializer(serializers.ModelSerializer):
 class ClassSerializer(serializers.ModelSerializer):
     level_name = serializers.SerializerMethodField()
     student_count = serializers.SerializerMethodField()
+    level = serializers.PrimaryKeyRelatedField(queryset=Level.objects.all(), required=False, allow_null=True)
     
     class Meta:
         model = Class

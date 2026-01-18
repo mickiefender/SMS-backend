@@ -30,12 +30,21 @@ class AttendanceViewSet(viewsets.ModelViewSet):
         """Bulk mark attendance for multiple students"""
         attendances = request.data.get('attendances', [])
         created = 0
+        errors = []
         for att_data in attendances:
             serializer = self.get_serializer(data=att_data)
             if serializer.is_valid():
                 serializer.save(teacher=request.user)
                 created += 1
-        return Response({'created': created}, status=status.HTTP_201_CREATED)
+            else:
+                errors.append({
+                    'data': att_data,
+                    'errors': serializer.errors
+                })
+        return Response({
+            'created': created,
+            'errors': errors if errors else None
+        }, status=status.HTTP_201_CREATED if created > 0 else status.HTTP_400_BAD_REQUEST)
     
     @action(detail=False, methods=['get'])
     def student_report(self, request):

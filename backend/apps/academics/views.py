@@ -2,7 +2,7 @@ from rest_framework import viewsets, status
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
-from core.permissions import IsSchoolAdminOrHigher
+from core.permissions import IsSchoolAdminOrHigher, IsSchoolAdminOrTeacher
 from apps.academics.models import (
     Faculty, Department, Level, Subject, Class,
     ClassSubject, Enrollment, Timetable, AcademicCalendarEvent
@@ -23,7 +23,11 @@ def get_school_filter(user):
 
 class FacultyViewSet(viewsets.ModelViewSet):
     serializer_class = FacultySerializer
-    permission_classes = [IsAuthenticated, IsSchoolAdminOrHigher]
+    
+    def get_permissions(self):
+        if self.action in ['create', 'update', 'partial_update', 'destroy']:
+            return [IsAuthenticated(), IsSchoolAdminOrHigher()]
+        return [IsAuthenticated()]
     
     def get_queryset(self):
         school_id = get_school_filter(self.request.user)
@@ -34,7 +38,11 @@ class FacultyViewSet(viewsets.ModelViewSet):
 
 class DepartmentViewSet(viewsets.ModelViewSet):
     serializer_class = DepartmentSerializer
-    permission_classes = [IsAuthenticated, IsSchoolAdminOrHigher]
+    
+    def get_permissions(self):
+        if self.action in ['create', 'update', 'partial_update', 'destroy']:
+            return [IsAuthenticated(), IsSchoolAdminOrHigher()]
+        return [IsAuthenticated()]
     
     def get_queryset(self):
         school_id = get_school_filter(self.request.user)
@@ -45,7 +53,11 @@ class DepartmentViewSet(viewsets.ModelViewSet):
 
 class LevelViewSet(viewsets.ModelViewSet):
     serializer_class = LevelSerializer
-    permission_classes = [IsAuthenticated, IsSchoolAdminOrHigher]
+    
+    def get_permissions(self):
+        if self.action in ['create', 'update', 'partial_update', 'destroy']:
+            return [IsAuthenticated(), IsSchoolAdminOrHigher()]
+        return [IsAuthenticated()]
     
     def get_queryset(self):
         school_id = get_school_filter(self.request.user)
@@ -56,7 +68,11 @@ class LevelViewSet(viewsets.ModelViewSet):
 
 class SubjectViewSet(viewsets.ModelViewSet):
     serializer_class = SubjectSerializer
-    permission_classes = [IsAuthenticated, IsSchoolAdminOrHigher]
+    
+    def get_permissions(self):
+        if self.action in ['create', 'update', 'partial_update', 'destroy']:
+            return [IsAuthenticated(), IsSchoolAdminOrHigher()]
+        return [IsAuthenticated()]
     
     def get_queryset(self):
         school_id = get_school_filter(self.request.user)
@@ -84,7 +100,11 @@ class ClassViewSet(viewsets.ModelViewSet):
 
 class ClassSubjectViewSet(viewsets.ModelViewSet):
     serializer_class = ClassSubjectSerializer
-    permission_classes = [IsAuthenticated, IsSchoolAdminOrHigher]
+    
+    def get_permissions(self):
+        if self.action in ['create', 'update', 'partial_update', 'destroy']:
+            return [IsAuthenticated(), IsSchoolAdminOrHigher()]
+        return [IsAuthenticated()]
     
     def get_queryset(self):
         school_id = get_school_filter(self.request.user)
@@ -117,7 +137,11 @@ class TimetableViewSet(viewsets.ModelViewSet):
 
 class AcademicCalendarEventViewSet(viewsets.ModelViewSet):
     serializer_class = AcademicCalendarEventSerializer
-    permission_classes = [IsAuthenticated, IsSchoolAdminOrHigher]
+    
+    def get_permissions(self):
+        if self.action in ['create', 'update', 'partial_update', 'destroy']:
+            return [IsAuthenticated(), IsSchoolAdminOrHigher()]
+        return [IsAuthenticated()]
     
     def get_queryset(self):
         school_id = get_school_filter(self.request.user)
