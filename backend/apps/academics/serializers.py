@@ -1,7 +1,8 @@
 from rest_framework import serializers
 from apps.academics.models import (
     Faculty, Department, Level, Subject, Class,
-    ClassSubject, Enrollment, Timetable, AcademicCalendarEvent
+    ClassSubject, Enrollment, Timetable, AcademicCalendarEvent,
+    Exam, ExamResult, SchoolFees, SchoolEvent, Document, Notice, UserProfilePicture
 )
 from django.contrib.auth import get_user_model
 
@@ -83,6 +84,8 @@ class ClassSubjectSerializer(serializers.ModelSerializer):
 
 class EnrollmentSerializer(serializers.ModelSerializer):
     class_obj = serializers.PrimaryKeyRelatedField(queryset=Class.objects.all())
+    student = serializers.PrimaryKeyRelatedField(queryset=User.objects.all())
+    subject = serializers.PrimaryKeyRelatedField(queryset=Subject.objects.all())
     
     student_name = serializers.SerializerMethodField()
     student_email = serializers.SerializerMethodField()
@@ -143,4 +146,163 @@ class AcademicCalendarEventSerializer(serializers.ModelSerializer):
     def get_created_by_name(self, obj):
         if obj.created_by:
             return obj.created_by.get_full_name() or obj.created_by.username
+        return None
+
+
+class ExamSerializer(serializers.ModelSerializer):
+    subject_name = serializers.SerializerMethodField()
+    class_name = serializers.SerializerMethodField()
+    teacher_name = serializers.SerializerMethodField()
+    
+    class Meta:
+        model = Exam
+        fields = ['id', 'school', 'subject', 'subject_name', 'class_obj', 'class_name', 'title', 'description', 'exam_date', 'exam_time', 'duration_minutes', 'venue', 'total_marks', 'created_by', 'teacher_name', 'created_at', 'updated_at']
+    
+    def get_subject_name(self, obj):
+        return obj.subject.name if obj.subject else None
+    
+    def get_class_name(self, obj):
+        return obj.class_obj.name if obj.class_obj else None
+    
+    def get_teacher_name(self, obj):
+        if obj.created_by:
+            return obj.created_by.get_full_name() or obj.created_by.username
+        return None
+
+
+class ExamResultSerializer(serializers.ModelSerializer):
+    student_name = serializers.SerializerMethodField()
+    subject_name = serializers.SerializerMethodField()
+    exam_title = serializers.SerializerMethodField()
+    
+    class Meta:
+        model = ExamResult
+        fields = ['id', 'school', 'exam', 'exam_title', 'student', 'student_name', 'subject_name', 'marks_obtained', 'percentage', 'grade', 'remarks', 'recorded_by', 'recorded_date', 'updated_at']
+    
+    def get_student_name(self, obj):
+        try:
+            if obj.student:
+                return obj.student.get_full_name() or obj.student.username
+        except:
+            pass
+        return None
+    
+    def get_subject_name(self, obj):
+        try:
+            return obj.exam.subject.name if obj.exam and obj.exam.subject else None
+        except:
+            return None
+    
+    def get_exam_title(self, obj):
+        try:
+            return obj.exam.title if obj.exam else None
+        except:
+            return None
+
+
+class SchoolFeesSerializer(serializers.ModelSerializer):
+    student_name = serializers.SerializerMethodField()
+    amount_remaining = serializers.SerializerMethodField()
+    class_name = serializers.SerializerMethodField()
+    
+    class Meta:
+        model = SchoolFees
+        fields = ['id', 'school', 'student', 'student_name', 'class_obj', 'class_name', 'title', 'amount_due', 'amount_paid', 'amount_remaining', 'due_date', 'status', 'description', 'created_at', 'updated_at']
+    
+    def get_student_name(self, obj):
+        try:
+            if obj.student:
+                return obj.student.get_full_name() or obj.student.username
+        except:
+            pass
+        return None
+    
+    def get_class_name(self, obj):
+        try:
+            return obj.class_obj.name if obj.class_obj else None
+        except:
+            return None
+    
+    def get_amount_remaining(self, obj):
+        try:
+            return float(obj.amount_due) - float(obj.amount_paid)
+        except:
+            return 0
+
+
+class SchoolEventSerializer(serializers.ModelSerializer):
+    created_by_name = serializers.SerializerMethodField()
+    
+    class Meta:
+        model = SchoolEvent
+        fields = ['id', 'school', 'title', 'description', 'event_date', 'event_time', 'location', 'image', 'created_by', 'created_by_name', 'created_at', 'updated_at']
+    
+    def get_created_by_name(self, obj):
+        try:
+            if obj.created_by:
+                return obj.created_by.get_full_name() or obj.created_by.username
+        except:
+            pass
+        return None
+
+
+class DocumentSerializer(serializers.ModelSerializer):
+    uploaded_by_name = serializers.SerializerMethodField()
+    subject_name = serializers.SerializerMethodField()
+    class_name = serializers.SerializerMethodField()
+    
+    class Meta:
+        model = Document
+        fields = ['id', 'school', 'title', 'document_type', 'description', 'file', 'related_class', 'class_name', 'related_subject', 'subject_name', 'uploaded_by', 'uploaded_by_name', 'created_at', 'updated_at']
+    
+    def get_uploaded_by_name(self, obj):
+        try:
+            if obj.uploaded_by:
+                return obj.uploaded_by.get_full_name() or obj.uploaded_by.username
+        except:
+            pass
+        return None
+    
+    def get_subject_name(self, obj):
+        try:
+            return obj.related_subject.name if obj.related_subject else None
+        except:
+            return None
+    
+    def get_class_name(self, obj):
+        try:
+            return obj.related_class.name if obj.related_class else None
+        except:
+            return None
+
+
+class NoticeSerializer(serializers.ModelSerializer):
+    posted_by_name = serializers.SerializerMethodField()
+    
+    class Meta:
+        model = Notice
+        fields = ['id', 'school', 'title', 'content', 'priority', 'posted_by', 'posted_by_name', 'is_active', 'created_at', 'updated_at']
+    
+    def get_posted_by_name(self, obj):
+        try:
+            if obj.posted_by:
+                return obj.posted_by.get_full_name() or obj.posted_by.username
+        except:
+            pass
+        return None
+
+
+class UserProfilePictureSerializer(serializers.ModelSerializer):
+    user_name = serializers.SerializerMethodField()
+    
+    class Meta:
+        model = UserProfilePicture
+        fields = ['id', 'user', 'user_name', 'picture', 'uploaded_at', 'updated_at']
+    
+    def get_user_name(self, obj):
+        try:
+            if obj.user:
+                return obj.user.get_full_name() or obj.user.username
+        except:
+            pass
         return None

@@ -63,32 +63,55 @@ class StudentPortalViewSet(viewsets.ViewSet):
     @action(detail=False, methods=['get'])
     def assignments(self, request):
         """Get all assignments for enrolled classes"""
-        from apps.academics.models import Enrollment
-        from apps.assignments.models import Assignment, AssignmentSubmission
-        
-        enrollments = Enrollment.objects.filter(student=request.user, is_active=True)
-        classes = [e.class_obj for e in enrollments]
-        assignments = Assignment.objects.filter(class_obj__in=classes)
-        
-        assignment_data = []
-        for assignment in assignments:
-            submission = AssignmentSubmission.objects.filter(
-                assignment=assignment,
-                student=request.user
-            ).first()
+        try:
+            from apps.academics.models import Enrollment
+            from apps.assignments.models import Assignment, AssignmentSubmission
             
-            assignment_data.append({
-                'assignment': {
-                    'id': assignment.id,
-                    'title': assignment.title,
-                    'description': assignment.description,
-                    'due_date': assignment.due_date,
-                },
-                'submission': {
-                    'status': submission.status if submission else 'not_submitted',
-                    'score': submission.score if submission else None,
-                    'feedback': submission.feedback if submission else None,
-                } if submission else None
-            })
+            print(f"[v0] Fetching assignments for user: {request.user}")
+            
+            # Get enrollments for student
+            enrollments = Enrollment.objects.filter(student=request.user, is_active=True)
+            print(f"[v0] Found {enrollments.count()} enrollments")
+            
+            classes = [e.class_obj for e in enrollments]
+            if not classes:
+                print("[v0] No classes found for student")
+                return Response([])
+            
+            # Get assignments for those classes
+            assignments = Assignment.objects.filter(class_obj__in=classes)
+            print(f"[v0] Found {assignments.count()} assignments")
+            
+            assignment_data = []
+            for assignment in assignments:
+                try:
+                    submission = AssignmentSubmission.objects.filter(
+                        assignment=assignment,
+                        student=request.user
+                    ).first()
+                    
+                    assignment_data.append({
+                        'assignment': {
+                            'id': assignment.id,
+                            'title': assignment.title,
+                            'description': assignment.description,
+                            'due_date': str(assignment.due_date) if assignment.due_date else None,
+                        },
+                        'submission': {
+                            'status': submission.status if submission else 'not_submitted',
+                            'score': submission.score if submission else None,
+                            'feedback': submission.feedback if submission else None,
+                        } if submission else None
+                    })
+                except Exception as e:
+                    print(f"[v0] Error processing assignment {assignment.id}: {e}")
+                    continue
+            
+            print(f"[v0] Returning {len(assignment_data)} assignments")
+            return Response(assignment_data)
         
-        return Response(assignment_data)
+        except Exception as e:
+            print(f"[v0] Error fetching assignments: {e}")
+            import traceback
+            traceback.print_exc()
+            return Response({'error': str(e)}, status=400)
