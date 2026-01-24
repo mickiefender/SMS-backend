@@ -2,11 +2,26 @@ from rest_framework import serializers
 from apps.academics.models import (
     Faculty, Department, Level, Subject, Class,
     ClassSubject, Enrollment, Timetable, AcademicCalendarEvent,
-    Exam, ExamResult, SchoolFees, SchoolEvent, Document, Notice, UserProfilePicture
+    Exam, ExamResult, SchoolFees, SchoolEvent, Document, Notice, UserProfilePicture,
+    ClassTeacher, StudentClass, ClassSubjectTeacher, Syllabus, SyllabusTopic
 )
 from django.contrib.auth import get_user_model
 
 User = get_user_model()
+
+
+class SyllabusTopicSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = SyllabusTopic
+        fields = '__all__'
+
+
+class SyllabusSerializer(serializers.ModelSerializer):
+    topics = SyllabusTopicSerializer(many=True, read_only=True)
+
+    class Meta:
+        model = Syllabus
+        fields = '__all__'
 
 
 class FacultySerializer(serializers.ModelSerializer):
@@ -306,3 +321,68 @@ class UserProfilePictureSerializer(serializers.ModelSerializer):
         except:
             pass
         return None
+
+
+class ClassTeacherSerializer(serializers.ModelSerializer):
+    teacher_name = serializers.SerializerMethodField()
+    teacher_email = serializers.SerializerMethodField()
+    class_name = serializers.SerializerMethodField()
+    
+    class Meta:
+        model = ClassTeacher
+        fields = ['id', 'class_obj', 'class_name', 'teacher', 'teacher_name', 'teacher_email', 'is_form_tutor', 'created_at', 'updated_at']
+    
+    def get_teacher_name(self, obj):
+        return obj.teacher.get_full_name() or obj.teacher.username if obj.teacher else None
+    
+    def get_teacher_email(self, obj):
+        return obj.teacher.email if obj.teacher else None
+    
+    def get_class_name(self, obj):
+        return obj.class_obj.name if obj.class_obj else None
+
+
+class StudentClassSerializer(serializers.ModelSerializer):
+    student_name = serializers.SerializerMethodField()
+    student_email = serializers.SerializerMethodField()
+    class_name = serializers.SerializerMethodField()
+    
+    class Meta:
+        model = StudentClass
+        fields = ['id', 'class_obj', 'class_name', 'student', 'student_name', 'student_email', 'assigned_date', 'is_active', 'created_at', 'updated_at']
+    
+    def get_student_name(self, obj):
+        return obj.student.get_full_name() or obj.student.username if obj.student else None
+    
+    def get_student_email(self, obj):
+        return obj.student.email if obj.student else None
+    
+    def get_class_name(self, obj):
+        return obj.class_obj.name if obj.class_obj else None
+
+
+class ClassSubjectTeacherSerializer(serializers.ModelSerializer):
+    teacher_name = serializers.SerializerMethodField()
+    teacher_email = serializers.SerializerMethodField()
+    class_name = serializers.SerializerMethodField()
+    subject_name = serializers.SerializerMethodField()
+    subject_code = serializers.SerializerMethodField()
+    
+    class Meta:
+        model = ClassSubjectTeacher
+        fields = ['id', 'class_obj', 'class_name', 'subject', 'subject_name', 'subject_code', 'teacher', 'teacher_name', 'teacher_email', 'assigned_date', 'is_active', 'created_at', 'updated_at']
+    
+    def get_teacher_name(self, obj):
+        return obj.teacher.get_full_name() or obj.teacher.username if obj.teacher else None
+    
+    def get_teacher_email(self, obj):
+        return obj.teacher.email if obj.teacher else None
+    
+    def get_class_name(self, obj):
+        return obj.class_obj.name if obj.class_obj else None
+    
+    def get_subject_name(self, obj):
+        return obj.subject.name if obj.subject else None
+    
+    def get_subject_code(self, obj):
+        return obj.subject.code if obj.subject else None

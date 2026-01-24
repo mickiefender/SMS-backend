@@ -3,8 +3,9 @@ from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
 from core.permissions import IsStudent, IsSchoolAdminOrHigher, IsSchoolAdminOrTeacher
-from apps.students.models import Grade, StudentGPA
-from apps.students.serializers import GradeSerializer, StudentGPASerializer, StudentPortalSerializer
+from apps.students.models import Grade, StudentGPA, StudentSocialClub, StudentSocialClubMember
+from apps.students.serializers import GradeSerializer, StudentGPASerializer, StudentPortalSerializer, StudentSocialClubSerializer, StudentSocialClubMemberSerializer
+from apps.students.tasks import send_faculty_advisor_notification
 from django.contrib.auth import get_user_model
 
 User = get_user_model()
@@ -54,6 +55,15 @@ class StudentPortalViewSet(viewsets.ViewSet):
             'percentage': percentage,
         })
     
+    @action(detail=False, methods=['get'])
+    def gpa(self, request):
+        """Get student GPA"""
+        try:
+            gpa = StudentGPA.objects.get(student=request.user)
+            return Response(StudentGPASerializer(gpa).data)
+        except StudentGPA.DoesNotExist:
+            return Response({'error': 'GPA not found'}, status=4.04)
+
     @action(detail=False, methods=['get'])
     def exam_results(self, request):
         """Get exam results"""
@@ -115,3 +125,77 @@ class StudentPortalViewSet(viewsets.ViewSet):
             import traceback
             traceback.print_exc()
             return Response({'error': str(e)}, status=400)
+
+
+class StudentBillingViewSet(viewsets.ViewSet):
+    permission_classes = [IsAuthenticated, IsStudent]
+
+    @action(detail=False, methods=['get'])
+    def my_billing(self, request):
+        """Get all billing for a student"""
+        from apps.billing.models import Billing
+        from apps.billing.serializers import BillingSerializer
+        
+        billing = Billing.objects.filter(student=request.user)
+        return Response(BillingSerializer(billing, many=True).data)
+
+
+class StudentSocialClubViewSet(viewsets.ModelViewSet):
+    queryset = StudentSocialClub.objects.all()
+    serializer_class = StudentSocialClubSerializer
+    permission_classes = [IsAuthenticated]
+
+    def get_permissions(self):
+        if self.action in ['create', 'update', 'partial_update', 'destroy']:
+            return [IsAuthenticated(), IsSchoolAdminOrHigher()]
+        return [IsAuthenticated()]
+
+    def perform_create(self, serializer):
+        club = serializer.save()
+        send_faculty_advisor_notification.delay(club.id)
+
+    @action(detail=True, methods=['get'], permission_classes=[IsAuthenticated])
+    def members(self, request, pk=None):
+        """Get all members of a social club, optionally filtered by status"""
+        club = self.get_object()
+        status = request.query_params.get('status', None)
+        members = StudentSocialClubMember.objects.filter(club=club)
+        if status:
+            members = members.filter(status=status)
+        serializer = StudentSocialClubMemberSerializer(members, many=True)
+        return Response(serializer.data)
+
+    @action(detail=True, methods=['post'], permission_classes=[IsAuthenticated, IsStudent])
+    def manage_membership(self, request, pk=None):
+        """Join or leave a social club"""
+        club = self.get_object()
+        action = request.data.get('action') # 'join' or 'leave'
+
+        if action == 'join':
+            _, created = StudentSocialClubMember.objects.get_or_create(
+                club=club, 
+                student=request.user,
+                defaults={'status': 'pending'}
+            )
+            if created:
+                return Response({'status': 'pending'}, status=status.HTTP_201_CREATED)
+            return Response({'status': 'already a member'}, status=status.HTTP_200_OK)
+        
+        elif action == 'leave':
+            StudentSocialClubMember.objects.filter(club=club, student=request.user).delete()
+            return Response({'status': 'left'}, status=status.HTTP_204_NO_CONTENT)
+        
+        return Response({'error': 'Invalid action'}, status=status.HTTP_400_BAD_REQUEST)
+
+    @action(detail=True, methods=['post'], permission_classes=[IsAuthenticated, IsSchoolAdminOrHigher])
+    def approve_membership(self, request, pk=None):
+        """Approve a student's membership"""
+        club = self.get_object()
+        student_id = request.data.get('student_id')
+        try:
+            member = StudentSocialClubMember.objects.get(club=club, student_id=student_id)
+            member.status = 'active'
+            member.save()
+            return Response({'status': 'approved'}, status=status.HTTP_200_OK)
+        except StudentSocialClubMember.DoesNotExist:
+            return Response({'error': 'Member not found'}, status=status.HTTP_404_NOT_FOUND)

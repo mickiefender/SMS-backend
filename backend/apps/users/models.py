@@ -60,5 +60,26 @@ class StudentProfile(models.Model):
     class Meta:
         verbose_name_plural = "Student Profiles"
     
+    def save(self, *args, **kwargs):
+        # Auto-generate student_id if not provided
+        if not self.student_id:
+            from datetime import datetime
+            
+            # Get school initials
+            school_name = self.user.school.name if self.user.school else "STU"
+            words = school_name.split()
+            school_initials = ''.join([word[0].upper() for word in words if word])[:3]
+            
+            year = datetime.now().year
+            
+            # Get the count of students in this school for this year
+            count = StudentProfile.objects.filter(
+                user__school=self.user.school,
+                created_at__year=year
+            ).count() + 1
+            
+            self.student_id = f"{school_initials}{year}{count:05d}"
+        super().save(*args, **kwargs)
+    
     def __str__(self):
-        return f"{self.user.get_full_name()} - Student"
+        return f"{self.user.get_full_name()} - Student ({self.student_id})"

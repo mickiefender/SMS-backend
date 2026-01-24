@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from apps.students.models import Grade, StudentGPA
+from apps.students.models import Grade, StudentGPA, StudentSocialClub, StudentSocialClubMember
 from apps.users.models import StudentProfile
 
 
@@ -52,3 +52,23 @@ class StudentPortalSerializer(serializers.Serializer):
         if hasattr(obj, 'gpa'):
             return StudentGPASerializer(obj.gpa).data
         return None
+
+
+class StudentSocialClubSerializer(serializers.ModelSerializer):
+    members_count = serializers.SerializerMethodField()
+
+    class Meta:
+        model = StudentSocialClub
+        fields = '__all__'
+
+    def get_members_count(self, obj):
+        return obj.members.count()
+
+
+class StudentSocialClubMemberSerializer(serializers.ModelSerializer):
+    student_name = serializers.CharField(source='student.get_full_name', read_only=True)
+    club_name = serializers.CharField(source='club.name', read_only=True)
+
+    class Meta:
+        model = StudentSocialClubMember
+        fields = '__all__'

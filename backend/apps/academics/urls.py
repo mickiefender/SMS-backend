@@ -4,7 +4,9 @@ from apps.academics.views import (
     FacultyViewSet, DepartmentViewSet, LevelViewSet, SubjectViewSet,
     ClassViewSet, ClassSubjectViewSet, EnrollmentViewSet, TimetableViewSet,
     AcademicCalendarEventViewSet, ExamViewSet, ExamResultViewSet, SchoolFeesViewSet,
-    SchoolEventViewSet, DocumentViewSet, NoticeViewSet, UserProfilePictureViewSet
+    SchoolEventViewSet, DocumentViewSet, NoticeViewSet, UserProfilePictureViewSet,
+    ClassTeacherViewSet, StudentClassViewSet, ClassSubjectTeacherViewSet,
+    SyllabusViewSet, SyllabusTopicViewSet
 )
 
 router = DefaultRouter()
@@ -12,8 +14,13 @@ router.register(r'faculties', FacultyViewSet, basename='faculty')
 router.register(r'departments', DepartmentViewSet, basename='department')
 router.register(r'levels', LevelViewSet, basename='level')
 router.register(r'subjects', SubjectViewSet, basename='subject')
+router.register(r'syllabuses', SyllabusViewSet, basename='syllabus')
+router.register(r'syllabus-topics', SyllabusTopicViewSet, basename='syllabus-topic')
 router.register(r'classes', ClassViewSet, basename='class')
 router.register(r'class-subjects', ClassSubjectViewSet, basename='class-subject')
+router.register(r'class-teachers', ClassTeacherViewSet, basename='class-teacher')
+router.register(r'student-classes', StudentClassViewSet, basename='student-class')
+router.register(r'class-subject-teachers', ClassSubjectTeacherViewSet, basename='class-subject-teacher')
 router.register(r'enrollments', EnrollmentViewSet, basename='enrollment')
 router.register(r'timetables', TimetableViewSet, basename='timetable')
 router.register(r'calendar-events', AcademicCalendarEventViewSet, basename='calendar-event')

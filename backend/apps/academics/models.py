@@ -49,7 +49,7 @@ class Level(models.Model):
 
 class Subject(models.Model):
     school = models.ForeignKey(School, on_delete=models.CASCADE, related_name='subjects')
-    code = models.CharField(max_length=50)
+    code = models.CharField(max_length=50, unique=True)
     name = models.CharField(max_length=255)
     description = models.TextField(blank=True)
     credit_hours = models.IntegerField(default=3)
@@ -59,12 +59,29 @@ class Subject(models.Model):
     class Meta:
         unique_together = ['school', 'code']
     
+    def save(self, *args, **kwargs):
+        if not self.code:
+            # Get school initials
+            school_name = self.school.name if self.school else "SUB"
+            words = school_name.split()
+            school_initials = ''.join([word[0].upper() for word in words if word])[:3]
+            
+            # Get first 3 letters of subject name in uppercase
+            subject_abbr = self.name[:3].upper() if self.name else "UNK"
+            
+            # Get the count of subjects in this school
+            count = Subject.objects.filter(school=self.school).count() + 1
+            
+            self.code = f"{school_initials}{subject_abbr}{count:03d}"
+        super().save(*args, **kwargs)
+    
     def __str__(self):
         return f"{self.code} - {self.name}"
 
 
 class Class(models.Model):
     school = models.ForeignKey(School, on_delete=models.CASCADE, related_name='classes')
+    code = models.CharField(max_length=50, unique=True, null=True, blank=True)
     name = models.CharField(max_length=100)
     level = models.ForeignKey(Level, on_delete=models.SET_NULL, null=True)
     capacity = models.IntegerField()
@@ -74,6 +91,19 @@ class Class(models.Model):
     class Meta:
         unique_together = ['school', 'name', 'level']
         verbose_name_plural = "Classes"
+    
+    def save(self, *args, **kwargs):
+        if not self.code:
+            # Get school initials
+            school_name = self.school.name if self.school else "CLS"
+            words = school_name.split()
+            school_initials = ''.join([word[0].upper() for word in words if word])[:3]
+            
+            # Get the count of classes in this school
+            count = Class.objects.filter(school=self.school).count() + 1
+            
+            self.code = f"{school_initials}-{count:03d}"
+        super().save(*args, **kwargs)
     
     def __str__(self):
         return f"{self.school.name} - {self.name}"
@@ -98,12 +128,64 @@ class Enrollment(models.Model):
     subject = models.ForeignKey(Subject, on_delete=models.CASCADE)
     enrollment_date = models.DateField(auto_now_add=True)
     is_active = models.BooleanField(default=True)
+    is_current = models.BooleanField(default=True)
+    status = models.CharField(max_length=20, default='active', choices=[('active', 'Active'), ('inactive', 'Inactive'), ('completed', 'Completed')])
+    remarks = models.TextField(blank=True)
+    updated_at = models.DateTimeField(auto_now=True)
     
     class Meta:
         unique_together = ['class_obj', 'student', 'subject']
     
     def __str__(self):
         return f"{self.student.get_full_name()} - {self.class_obj.name}"
+
+
+class ClassTeacher(models.Model):
+    """Track which teacher(s) manage which class"""
+    class_obj = models.ForeignKey(Class, on_delete=models.CASCADE, related_name='teachers')
+    teacher = models.ForeignKey('users.User', on_delete=models.CASCADE, limit_choices_to={'role': 'teacher'}, related_name='managed_classes')
+    is_form_tutor = models.BooleanField(default=False)  # Main class teacher
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    
+    class Meta:
+        unique_together = ['class_obj', 'teacher']
+    
+    def __str__(self):
+        return f"{self.teacher.get_full_name()} - {self.class_obj.name} {'(Form Tutor)' if self.is_form_tutor else ''}"
+
+
+class StudentClass(models.Model):
+    """Direct tracking of student-class assignments"""
+    class_obj = models.ForeignKey(Class, on_delete=models.CASCADE, related_name='student_enrollments')
+    student = models.ForeignKey('users.User', on_delete=models.CASCADE, limit_choices_to={'role': 'student'}, related_name='class_assignments')
+    assigned_date = models.DateField(auto_now_add=True)
+    is_active = models.BooleanField(default=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    
+    class Meta:
+        unique_together = ['class_obj', 'student']
+    
+    def __str__(self):
+        return f"{self.student.get_full_name()} - {self.class_obj.name}"
+
+
+class ClassSubjectTeacher(models.Model):
+    """Track which teacher teaches which subject in which class"""
+    class_obj = models.ForeignKey(Class, on_delete=models.CASCADE, related_name='subject_teachers')
+    subject = models.ForeignKey(Subject, on_delete=models.CASCADE, related_name='class_assignments')
+    teacher = models.ForeignKey('users.User', on_delete=models.CASCADE, limit_choices_to={'role': 'teacher'}, related_name='subject_assignments')
+    assigned_date = models.DateField(auto_now_add=True)
+    is_active = models.BooleanField(default=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    
+    class Meta:
+        unique_together = ['class_obj', 'subject', 'teacher']
+    
+    def __str__(self):
+        return f"{self.teacher.get_full_name()} - {self.subject.code} in {self.class_obj.name}"
 
 
 class Timetable(models.Model):
@@ -347,3 +429,35 @@ class UserProfilePicture(models.Model):
     
     def __str__(self):
         return f"{self.user.get_full_name()} - Profile Picture"
+
+
+class Syllabus(models.Model):
+    """Syllabus for each subject"""
+    subject = models.OneToOneField(Subject, on_delete=models.CASCADE, related_name='syllabus')
+    title = models.CharField(max_length=255)
+    description = models.TextField(blank=True)
+    file = models.FileField(upload_to='syllabuses/', null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name_plural = "Syllabuses"
+
+    def __str__(self):
+        return f"{self.subject.name} - Syllabus"
+
+
+class SyllabusTopic(models.Model):
+    """Topics within a syllabus"""
+    syllabus = models.ForeignKey(Syllabus, on_delete=models.CASCADE, related_name='topics')
+    title = models.CharField(max_length=255)
+    description = models.TextField(blank=True)
+    order = models.IntegerField(default=1)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ['order']
+
+    def __str__(self):
+        return f"{self.syllabus.title} - {self.title}"

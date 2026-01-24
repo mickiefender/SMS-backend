@@ -88,3 +88,42 @@ class StudentGPA(models.Model):
         
         self.total_credits = total_credits
         self.save()
+
+
+class StudentSocialClub(models.Model):
+    name = models.CharField(max_length=100)
+    description = models.TextField()
+    faculty_advisor = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, limit_choices_to={'role__in': ['teacher', 'school_admin']})
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    def __str__(self):
+        return self.name
+
+
+class StudentSocialClubMember(models.Model):
+    ROLE_CHOICES = (
+        ('member', 'Member'),
+        ('president', 'President'),
+        ('vice_president', 'Vice President'),
+        ('secretary', 'Secretary'),
+        ('treasurer', 'Treasurer'),
+    )
+
+    STATUS_CHOICES = (
+        ('active', 'Active'),
+        ('inactive', 'Inactive'),
+        ('pending', 'Pending'),
+    )
+
+    club = models.ForeignKey(StudentSocialClub, on_delete=models.CASCADE, related_name='members')
+    student = models.ForeignKey(User, on_delete=models.CASCADE, limit_choices_to={'role': 'student'})
+    role = models.CharField(max_length=20, choices=ROLE_CHOICES, default='member')
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='pending')
+    joined_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        unique_together = ('club', 'student')
+
+    def __str__(self):
+        return f"{self.student.get_full_name()} - {self.club.name} ({self.get_role_display()})"
